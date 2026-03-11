@@ -96,7 +96,7 @@ public class LocalTaskMonitor implements TaskMonitor {
 
     @Override
     public boolean cancelTaskComputation(UUID id) {
-        if (tasksFuture.containsKey(id)) {
+        if (tasksFuture.containsKey(id) && tasksFuture.get(id) != null) {
             return tasksFuture.get(id).cancel(true);
         }
         return false;

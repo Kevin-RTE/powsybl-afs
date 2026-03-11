@@ -216,6 +216,62 @@ class LocalTaskMonitorTest extends AbstractProjectFileTest {
     }
 
     @Test
+    void taskFutureNullNoInterruptionTest() throws TaskMonitor.NotACancellableTaskMonitor, InterruptedException {
+        try (TaskMonitor monitor = new LocalTaskMonitor()) {
+            // Start a task and add a listener
+            TaskMonitor.Task task = monitor.startTask(foo);
+            monitor.addListener(listener);
+
+            // Update the task
+            monitor.updateTaskFuture(task.getId(), null);
+
+            // Check on the listener
+            assertEquals(1, events.size());
+            assertEquals(new TaskCancellableStatusChangeEvent(task.getId(), 2L, false), events.pop());
+
+            CountDownLatch waitForStart = new CountDownLatch(1);
+            CountDownLatch waitIndefinitely = new CountDownLatch(1);
+            CountDownLatch waitForInterruption = new CountDownLatch(1);
+
+            AtomicBoolean interrupted = new AtomicBoolean(false);
+            CompletableFutureTask<Void> dummyTaskProcess = CompletableFutureTask.runAsync(() -> {
+                waitForStart.countDown();
+                try {
+                    waitIndefinitely.await();
+                    fail();
+                } catch (InterruptedException exc) {
+                    interrupted.set(true);
+                    waitForInterruption.countDown();
+                }
+                return null;
+            }, Executors.newSingleThreadExecutor());
+
+            // Start the task
+            waitForStart.await();
+            monitor.updateTaskFuture(task.getId(), null);
+
+            // Checks on the listener
+            assertEquals(1, events.size());
+            assertEquals(new TaskCancellableStatusChangeEvent(task.getId(), 3L, false), events.pop());
+
+            // Cancel the task
+            assertThat(monitor.cancelTaskComputation(task.getId())).isFalse();
+            assertThat(dummyTaskProcess.isCancelled()).isFalse();
+        }
+    }
+
+    @Test
+    void noTaskToInterruptTest() throws TaskMonitor.NotACancellableTaskMonitor, InterruptedException {
+        try (TaskMonitor monitor = new LocalTaskMonitor()) {
+            // Given
+            TaskMonitor.Task task = monitor.startTask(foo);
+
+            // When & Then
+            assertThat(monitor.cancelTaskComputation(task.getId())).isFalse();
+        }
+    }
+
+    @Test
     void stopTaskTest() {
         try (TaskMonitor monitor = new LocalTaskMonitor()) {
             // Start a task and add a listener
