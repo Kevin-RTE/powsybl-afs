@@ -261,7 +261,7 @@ class LocalTaskMonitorTest extends AbstractProjectFileTest {
     }
 
     @Test
-    void noTaskToInterruptTest() throws TaskMonitor.NotACancellableTaskMonitor, InterruptedException {
+    void noTaskToInterruptTest() {
         try (TaskMonitor monitor = new LocalTaskMonitor()) {
             // Given
             TaskMonitor.Task task = monitor.startTask(foo);
